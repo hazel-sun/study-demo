@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      /**
+       * vue 异步更新原理 - Vue的数据频繁变化，但为什么dom只会更新一次？
+       * 1. 侦听到数据变化，Vue 将开启一个队列，并缓存在同一事件循环中发生的所有数据变更
+       * 2. 如果同一个 watcher 被多次触发，只会被推入到队列中一次，可以避免重复修改相同的dom，这种去除重复数据，对于避免不必要的计算和 DOM 操作是非常重要的
+       * 3. 同步任务执行完毕，开始执行异步 watcher 队列的任务，一次性更新 DOM
+       * */
+      // 定义watcher类
+      let queue = [] // 定义watcher队列
+      let has = {} // 使用对象来保存id，进行去重操作
+      let pending = false // 如果异步队列正在执行，将不会再次执行
+      class Watcher {
+        update() {
+          // 放到watcher队列中，异步更新
+          queueWatcher(this)
+        }
+        // 触发更新
+        run() {
+          this.get()
+        }
+      }
+      // 队列中添加watcher
+      function queueWatcher(watcher) {
+        const id = watcher.id
+        // 先判断watcher是否存在 去掉重复的watcher
+        if (!has[id]) {
+          queue.push(watcher)
+          has[id] = true
+          if (!pending) {
+            pending = true
+            // 使用异步更新watcher
+            nextTick(flushSchedulerQueue)
+          }
+        }
+      }
+      // 执行watcher队列的任务
+      function flushSchedulerQueue() {
+        queue.forEach((watcher) => {
+          watcher.run()
+          if (watcher.options.render) {
+            // 在更新之后执行对应的回调: 这里是updated钩子函数
+            watcher.cb()
+          }
+        })
+        // 执行完成后清空队列 重置pending状态
+        queue = []
+        has = {}
+        pending = false
+      }
+      /**
+       * vue nextTick
+       * 1. 异步优先级判断，总结就是Promise > MutationObserver > setImmediate > setTimeout
+       * 2. 优先使用Promise，因为根据 event loop 与浏览器更新渲染时机，宏任务 → 微任务 → 渲染更新，使用微任务，本次event loop轮询就可以获取到更新的dom
+       * 3. 如果使用宏任务，要到下一次event loop中，才能获取到更新的dom
+       * */
+      // 定义nextTick的回调队列
+      // 定义nextTick的回调队列
+      let callbacks = []
+
+      // 批量执行nextTick的回调队列
+      function flushCallbacks() {
+        callbacks.forEach((cb) => cb())
+        callbacks = []
+        pending = false
+      }
+
+      //定义异步方法，优先使用微任务实现
+      let timerFunc
+
+      // 优先使用promise 微任务
+      if (Promise) {
+        timerFunc = function () {
+          return Promise.resolve().then(flushCallbacks)
+        }
+        // 如不支持promise，再使用MutationObserver 微任务
+      } else if (MutationObserver) {
+        timerFunc = function () {
+          const textNode = document.createTextNode('1')
+          const observer = new MutationObserver(() => {
+            flushCallbacks()
+            observer.disconnect()
+          })
+          const observe = observer.observe(textNode, { characterData: true })
+          textNode.textContent = '2'
+        }
+        // 微任务不支持，再使用宏任务实现
+      } else if (setImmediate) {
+        timerFunc = function () {
+          setImmediate(flushCallbacks)
+        }
+      } else {
+        timerFunc = function () {
+          setTimeout(flushCallbacks)
+        }
+      }
+
+      // 定义nextTick方法
+      export function nextTick(cb) {
+        callbacks.push(cb)
+        if (!pending) {
+          pending = true
+          timerFunc()
+        }
+      }
+    </script>
+  </body>
+</html>

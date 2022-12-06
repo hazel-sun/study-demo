@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <p>姓名: <span>{{name}}</span></p>
+      <p>年龄: <span>{{age}}</span></p>
+    </div>
+    <script>
+      window.onload = function () {
+        // new一个vue实例
+        let vue = new Vue({
+          el: '#app',
+          data: {
+            name: '加载中',
+            age: '18',
+          },
+        })
+        // 2s后更新页面的信息
+        setTimeout(() => {
+          // 修改vue中$data的name和age属性
+          vue.$data.name = '小明'
+          vue.$data.age = 20
+        }, 2000)
+      }
+      /**
+       * 手写mini版的MVVM框架
+       * 2s后修改姓名和年龄这两个值，页面响应式更新渲染
+       *
+       * Vue 类
+       * 1. observe函数 -  响应式数据
+       * 2. compile 函数 - 模板编译
+       *
+       * Dep 类
+       * 1. dep对象存储所有的观察者
+       **/
+      class Vue {
+        constructor(options) {
+          this.options = options
+          this.$data = options.data
+          // 给响应式附上数据
+          this.observe(options.data)
+          this.compile(document.querySelector(options.el))
+        }
+        observe(data) {
+          new Proxy(target, {
+            get(target, key, receiver) {
+              let result = Reflect.get(target, key)
+              // 递归获取对象多层嵌套的情况，如pro.info.type（递归监听，保证每一层返回都是proxy对象）
+              return isObject(result)
+            },
+            set(target, key, value, receiver) {
+              if (key !== 'length') {
+                // 解决对数组修改，重复更新视图的问题
+                console.log('更新视图')
+              }
+              return Reflect.set(target, key, value, receiver)
+            },
+          })
+        }
+        /**
+         * 遇到 mustache（双大括号{{}})形式的文本，
+         * 则替换成 data.key对应的值，
+         * 同时将该dom节点添加到对应key值的dep对象中
+         **/
+        compile(dom) {
+          dom.childNodes.forEach((child) => {
+            // nodeType 为3时为文本节点，并且该节点的内容包含`mustache`（双大括号{{}})
+            if (child.nodeType === 3 && /\{\{(.*)\}\}/.test(child.textContent)) {
+              // RegExp.$1是正则表达式匹配的第一个字符串，这里对应的就是data中的key值
+              let key = RegExp.$1.trim()
+              // 将该节点添加到对应的观察者对象中，在下面的的this.options.data[key]中触发对应的get方法
+              console.log(Dep.target, child, 'Dep')
+              Dep.target = child
+              // 将{{key}} 替换成data中对应的值
+              child.textContent = child.textContent.replace(`{{${key}}}`, this.options.data[key])
+              Dep.target = null
+            }
+            // 递归遍历子节点
+            if (child.childNodes.length) {
+              this.compile(child)
+            }
+          })
+        }
+      }
+      function isObject(target) {
+        if (typeof target === 'object' && target !== null) {
+          return observe(target)
+        } else {
+          return target
+        }
+      }
+    </script>
+  </body>
+</html>
