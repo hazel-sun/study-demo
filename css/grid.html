@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>grid布局play</title>
+  <style>
+    .wrapper {
+      margin: 60px;
+      /* 声明一个容器 */
+      display: grid;
+      /*  声明列的宽度 3列，都是200px */
+      /* 表示列宽是 200 px，但列的数量是不固定的，只要浏览器能够容纳得下 */
+      /* grid-template-columns: repeat(auto-fill, 200px) ; */
+      /* repeat() 函数：可以简化重复的值。该函数接受两个参数，第一个参数是重复的次数，第二个参数是所要重复的值 */
+      grid-template-columns: repeat(3, 200px);
+      /* fr 单位代表网格容器中可用空间的一等份。 表示第一个列宽设置为 200px，后面剩余的宽度分为两部分，宽度分别为剩余宽度的 1/3 和 2/3 */
+      grid-template-columns: 200px 1fr 2fr;
+      /* auto意思是随浏览器带下剩余款速适配 */
+      grid-template-columns: 100px auto 100px;
+      /*  声明行间距和列间距  */
+      grid-gap: 20px;
+      /*  声明行的高度 2行 */
+      grid-template-rows: 100px 200px;
+    }
+
+    .one {
+      background: #19caad;
+       /* 从左边网格线数1和2，这个的意思是one这个盒子占2个网格 */
+      grid-column-start: 1;
+      grid-column-end: 2;
+    }
+
+    .two {
+      background: #8cc7b5;
+    }
+
+    .three {
+      background: #d1ba74;
+    }
+
+    .four {
+      background: #bee7e9;
+    }
+
+    .five {
+      background: #e6ceac;
+    }
+
+    .six {
+      background: #ecad9e;
+    }
+
+    .item {
+      text-align: center;
+      font-size: 200%;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="one item">One</div>
+    <div class="two item">Two</div>
+    <div class="three item">Three</div>
+    <div class="four item">Four</div>
+    <div class="five item">Five</div>
+    <div class="six item">Six</div>
+  </div>
+</body>
+
+</html>
